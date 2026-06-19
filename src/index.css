@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+html[data-theme='light'],
+body[data-theme='light'] {
+  --color-primary: 99 102 241;
+  --color-primary-dark: 79 70 229;
+  --color-primary-light: 129 140 248;
+  --color-secondary: 139 92 246;
+  --color-accent: 34 211 238;
+  --color-success: 16 185 129;
+  --color-warning: 245 158 11;
+  --color-error: 239 68 68;
+  --color-surface: 255 255 255;
+  --color-background: 248 250 252;
+  --color-background-alt: 241 245 249;
+  --color-surface-muted: 241 245 249;
+  --color-surface-hover: 226 232 240;
+  --color-text-primary: 30 41 59;
+  --color-text-secondary: 100 116 139;
+  --color-border: 226 232 240;
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -2px rgba(15, 23, 42, 0.08);
+  --shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+}
+
+html[data-theme='dark'],
+body[data-theme='dark'] {
+  --color-primary: 129 140 248;
+  --color-primary-dark: 99 102 241;
+  --color-primary-light: 165 180 252;
+  --color-secondary: 167 139 250;
+  --color-accent: 103 232 249;
+  --color-success: 52 211 153;
+  --color-warning: 251 191 36;
+  --color-error: 248 113 113;
+  --color-surface: 15 23 42;
+  --color-background: 2 6 23;
+  --color-background-alt: 15 23 42;
+  --color-surface-muted: 30 41 59;
+  --color-surface-hover: 51 65 85;
+  --color-text-primary: 226 232 240;
+  --color-text-secondary: 148 163 184;
+  --color-border: 51 65 85;
+  --shadow-card: 0 1px 3px rgba(2, 6, 23, 0.45), 0 1px 2px rgba(2, 6, 23, 0.35);
+  --shadow-elevated: 0 10px 15px -3px rgba(2, 6, 23, 0.45), 0 4px 6px -2px rgba(2, 6, 23, 0.35);
+  --shadow-modal: 0 25px 50px -12px rgba(2, 6, 23, 0.65);
+  color-scheme: dark;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-text-primary));
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-background-alt));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-surface-hover));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-text-secondary));
+}
+
+/* FullCalendar custom styles */
+.fc {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: rgb(var(--color-text-primary));
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgb(var(--color-text-primary));
+}
+
+.fc .fc-button-primary {
+  background-color: rgb(var(--color-primary));
+  border-color: rgb(var(--color-primary));
+}
+
+.fc .fc-button-primary:hover {
+  background-color: rgb(var(--color-primary-dark));
+  border-color: rgb(var(--color-primary-dark));
+}
+
+.fc .fc-button-primary:disabled {
+  background-color: rgb(var(--color-primary-light));
+  border-color: rgb(var(--color-primary-light));
+}
+
+.fc .fc-daygrid-day-top {
+  flex-direction: row;
+}
+
+.fc .fc-daygrid-day-number {
+  color: rgb(var(--color-text-primary));
+  font-weight: 500;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th,
+.fc-theme-standard .fc-scrollgrid {
+  border-color: rgb(var(--color-border));
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-top {
+  color: rgb(var(--color-text-secondary));
+}
+
+.fc .fc-day-today {
+  background-color: rgb(var(--color-primary) / 0.14) !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+  background-color: rgb(var(--color-primary));
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-gray-100 {
+  background-color: rgb(var(--color-surface-muted)) !important;
+}
+
+.bg-gray-200 {
+  background-color: rgb(var(--color-surface-hover)) !important;
+}
+
+.bg-gray-300 {
+  background-color: rgb(var(--color-border)) !important;
+}
+
+.text-gray-300 {
+  color: rgb(var(--color-border)) !important;
+}
+
+.hover\:bg-gray-100:hover {
+  background-color: rgb(var(--color-surface-muted)) !important;
+}
+
+.hover\:bg-gray-200:hover {
+  background-color: rgb(var(--color-surface-hover)) !important;
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
