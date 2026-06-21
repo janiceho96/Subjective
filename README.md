@@ -14,6 +14,7 @@
 - 📄 **Native Document Analyzer:** Convert books (`.pdf`), presentations (`.pptx`), Word files (`.docx`), or plain text (`.txt`/`.md`) into flashcards. 
   - Uses a **native OS file picker** to safely bypass browser-based path sandboxing.
   - Powered by Microsoft's **`markitdown`** package in Python for text extraction.
+  - Cross-platform support (automatically maps `python` commands on Windows and `python3` on macOS).
 - 🃏 **Study Mode:** Shuffles active decks and opens an interactive 3D flip card system to test your recall with "Got it!" and "Study Again" controls.
 - ⭐ **Starred & Favorites:** Toggle stars on cards to automatically compile a virtual **Starred Cards** deck in the sidebar.
 - 🏷️ **Dynamic Tag Filters:** Narrow down your list instantly using the tag cloud built right under the subject list.
@@ -43,10 +44,16 @@ npm install
 ```
 
 ### 3. Install Python dependencies (for Document Analyzer)
-The Document Analyzer relies on Python libraries. Install them by running:
-```bash
-pip install markitdown pypdf python-docx
-```
+The Document Analyzer relies on Python libraries. Install them depending on your OS:
+
+- **Windows:**
+  ```bash
+  pip install markitdown pypdf python-docx
+  ```
+- **macOS / Linux:**
+  ```bash
+  pip3 install markitdown pypdf python-docx
+  ```
 
 ### 4. Setup API Keys
 Subjective uses a local environment file to configure AI services.
@@ -60,21 +67,47 @@ ANTHROPIC_BASE_URL=https://api.silra.cn/
 
 ## 🚀 Running the App
 
-### Compile and Start in Development Mode
-To build frontend assets and launch the Electron application:
+### One-Click Launchers
+We provide simple launcher scripts to clean up process locks and run the app instantly:
+- **Windows:** Double-click the **`start_subjective_app.bat`** file.
+- **macOS / Linux:**
+  1. Open your terminal in the app directory and make the script executable:
+     ```bash
+     chmod +x launch.sh
+     ```
+  2. Launch the script:
+     ```bash
+     ./launch.sh
+     ```
+
+### Manual Dev Launch
 ```bash
 npm run build:vite
 npm start
 ```
-Alternatively, you can double-click the **`start_subjective_app.bat`** launcher script in the root directory to clean up process locks and launch the application instantly.
+
+---
+
+## 📦 Packaging & Building
+
+To package the application into a standalone installer (e.g. `.exe` for Windows or `.dmg` for Mac):
+
+- **Build for Windows (must run on Windows):**
+  ```bash
+  npm run build
+  ```
+  *(Outputs folder and installers inside the `release/` directory)*
+- **Build for macOS (must run on Mac):**
+  ```bash
+  npm run build
+  ```
+  *(Outputs `.dmg` installer and `.app` bundle inside the `release/` directory)*
 
 ---
 
 ## 📸 Screenshots
 
 ### AI Study Companion & Document Import
-*(To add your own screenshot, replace the placeholder below or add a screenshot image named `chat_screenshot.png` to the project root)*
-
 ![Document Analyzer & AI Companion](chat_screenshot.png)
 
 ### Library Dashboard & Study Cards
