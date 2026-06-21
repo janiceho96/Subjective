@@ -264,7 +264,14 @@ ipcMain.handle('get-user-data-path', () => userDataPath)
 ipcMain.handle('get-data-dir', () => dataDir)
 
 ipcMain.handle('read-file', async (_event, filename: string) => {
-  const filePath = path.join(dataDir, filename)
+  const filePath = path.resolve(dataDir, filename)
+  const safePrefix = dataDir.endsWith(path.sep) ? dataDir : dataDir + path.sep
+  
+  if (filePath !== dataDir && !filePath.startsWith(safePrefix)) {
+    log.error(`Security Warning: Prevented path traversal attempt to read file: ${filename}`)
+    return null
+  }
+
   try {
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf-8')
@@ -278,7 +285,14 @@ ipcMain.handle('read-file', async (_event, filename: string) => {
 })
 
 ipcMain.handle('write-file', async (_event, filename: string, data: unknown) => {
-  const filePath = path.join(dataDir, filename)
+  const filePath = path.resolve(dataDir, filename)
+  const safePrefix = dataDir.endsWith(path.sep) ? dataDir : dataDir + path.sep
+
+  if (filePath !== dataDir && !filePath.startsWith(safePrefix)) {
+    log.error(`Security Warning: Prevented path traversal attempt to write file: ${filename}`)
+    return false
+  }
+
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
     return true
