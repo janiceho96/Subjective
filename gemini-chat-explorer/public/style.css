@@ -701,3 +701,48 @@ body {
 .hidden {
     display: none !important;
 }
+
+/* --- MOBILE RESPONSIVE STYLING --- */
+@media (max-width: 768px) {
+    .app-container {
+        grid-template-columns: 1fr;
+        height: 100vh;
+    }
+    
+    .sidebar {
+        height: 35vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .chat-panel {
+        height: 65vh;
+    }
+    
+    .chat-messages {
+        padding: 20px 24px;
+    }
+    
+    .message {
+        max-width: 90%;
+    }
+    
+    .welcome-card {
+        padding: 24px 16px;
+    }
+    
+    .welcome-card h1 {
+        font-size: 1.6rem;
+    }
+    
+    .welcome-icon {
+        font-size: 2rem;
+        margin-bottom: 16px;
+    }
+    
+    .stat-pill {
+        padding: 8px 16px;
+        min-width: 90px;
+    }
+}
+

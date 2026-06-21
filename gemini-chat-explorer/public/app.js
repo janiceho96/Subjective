@@ -87,7 +87,7 @@ async function selectSession(session, cardElement) {
     messagesContainer.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 40px;">Parsing dialogue steps and loading messages...</div>';
     
     try {
-        const res = await fetch(`/api/session/${session.id}?source=${session.source}&file=${encodeURIComponent(session.file)}`);
+        const res = await fetch(`/api/session/${session.id}?source=${session.source}`);
         const chatData = await res.json();
         
         if (chatData.error) {
@@ -157,14 +157,18 @@ function renderMessages(messages) {
                 const argsStr = typeof tool.args === 'string' ? tool.args : JSON.stringify(tool.args, null, 2);
                 const outputStr = tool.output || 'No output captured (void function or silent tool).';
                 
+                const escapedName = escapeHtml(tool.name);
+                const escapedStatus = escapeHtml(tool.status);
+                const escapedStatusUpper = escapedStatus.toUpperCase();
+                
                 toolsHTML += `
                     <div class="tool-block">
                         <div class="tool-header" onclick="document.getElementById('body-${toolId}').classList.toggle('hidden')">
                             <div class="tool-header-left">
                                 <span class="tool-badge">Tool</span>
-                                <strong>${tool.name}</strong>
+                                <strong>${escapedName}</strong>
                             </div>
-                            <span class="tool-status ${tool.status}">${tool.status.toUpperCase()}</span>
+                            <span class="tool-status ${escapedStatus}">${escapedStatusUpper}</span>
                         </div>
                         <div class="tool-body hidden" id="body-${toolId}">
                             <div class="tool-section">

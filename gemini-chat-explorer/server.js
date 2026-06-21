@@ -1,10 +1,10 @@
 import express from 'express';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const LEGACY_DIR = 'C:\\Users\\User\\.gemini\\tmp\\user\\chats';
 const SQLITE_DIR = 'C:\\Users\\User\\.gemini\\antigravity-cli\\conversations';
@@ -13,14 +13,15 @@ app.use(express.static('public'));
 
 // Helper to read the first line and the last few lines of a file efficiently without loading all of it
 function readFirstAndLastLines(filePath) {
-    const fd = fs.openSync(filePath, 'r');
-    const stat = fs.statSync(filePath);
-    const fileSize = stat.size;
-    
-    let firstLine = '';
-    let lastChunk = '';
-    
+    let fd;
     try {
+        const stat = fs.statSync(filePath);
+        const fileSize = stat.size;
+        fd = fs.openSync(filePath, 'r');
+        
+        let firstLine = '';
+        let lastChunk = '';
+        
         // Read first 8KB to extract the first line
         const firstBufSize = Math.min(fileSize, 8192);
         if (firstBufSize > 0) {
@@ -38,11 +39,13 @@ function readFirstAndLastLines(filePath) {
             fs.readSync(fd, lastBuf, 0, lastBufSize, fileSize - lastBufSize);
             lastChunk = lastBuf.toString('utf8');
         }
+        
+        return { firstLine, lastChunk };
     } finally {
-        fs.closeSync(fd);
+        if (fd !== undefined) {
+            fs.closeSync(fd);
+        }
     }
-    
-    return { firstLine, lastChunk };
 }
 
 // Get all sessions
@@ -127,37 +130,22 @@ app.get('/api/sessions', (req, res) => {
     // 2. Scan SQLite databases
     if (fs.existsSync(SQLITE_DIR)) {
         try {
-            const files = fs.readdirSync(SQLITE_DIR).filter(f => f.endsWith('.db'));
-            for (const f of files) {
-                const fullPath = path.join(SQLITE_DIR, f);
-                const stat = fs.statSync(fullPath);
-                
-                let id = f.replace('.db', '');
-                let summary = 'Active Workspace Session';
-                let date = stat.mtime;
-                
-                try {
-                    // Call Python script to extract DB metadata quickly
-                    const stdout = execSync(`python dump_sqlite.py --meta "${fullPath}"`, { encoding: 'utf-8' });
-                    const meta = JSON.parse(stdout);
-                    if (meta.summary) {
-                        summary = meta.summary;
-                    }
-                    if (meta.id) {
-                        id = meta.id;
-                    }
-                } catch (e) {
-                    console.error(`Error fetching meta for SQLite db ${f}:`, e);
+            // Call Python script to extract metadata of all databases in one process spawn
+            const stdout = execFileSync('python', ['dump_sqlite.py', '--scan', SQLITE_DIR], { encoding: 'utf-8' });
+            const dbs = JSON.parse(stdout);
+            
+            if (Array.isArray(dbs)) {
+                for (const db of dbs) {
+                    if (db.error) continue;
+                    sessions.push({
+                        id: db.id,
+                        title: db.summary,
+                        date: new Date(db.date),
+                        source: 'sqlite',
+                        size: (db.size / (1024 * 1024)).toFixed(2) + ' MB',
+                        file: db.file
+                    });
                 }
-                
-                sessions.push({
-                    id,
-                    title: summary,
-                    date,
-                    source: 'sqlite',
-                    size: (stat.size / (1024 * 1024)).toFixed(2) + ' MB',
-                    file: fullPath
-                });
             }
         } catch (e) {
             console.error("Error scanning SQLite database sessions:", e);
@@ -172,24 +160,48 @@ app.get('/api/sessions', (req, res) => {
 // Get specific session messages
 app.get('/api/session/:id', (req, res) => {
     const { id } = req.params;
-    const { source, file } = req.query;
+    const { source } = req.query;
     
-    if (!file || !fs.existsSync(file)) {
-        return res.status(404).json({ error: 'Chat file not found' });
+    // Strict alphanumeric/UUID style check on session ID to block Path Traversal and Command Injection
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+        return res.status(400).json({ error: 'Invalid session ID format' });
     }
     
+    let resolvedPath = '';
+    
     if (source === 'sqlite') {
-        // Call Python script to extract DB payload
+        resolvedPath = path.join(SQLITE_DIR, `${id}.db`);
+        if (!resolvedPath.startsWith(SQLITE_DIR) || !fs.existsSync(resolvedPath)) {
+            return res.status(404).json({ error: 'SQLite database session not found' });
+        }
+        
+        // Call Python script using safe process execution API
         try {
-            const stdout = execSync(`python dump_sqlite.py "${file}"`, { encoding: 'utf-8' });
+            const stdout = execFileSync('python', ['dump_sqlite.py', resolvedPath], { encoding: 'utf-8' });
             return res.json(JSON.parse(stdout));
         } catch (e) {
-            return res.status(500).json({ error: 'Failed to read SQLite file: ' + e.message });
+            return res.status(500).json({ error: 'Failed to parse SQLite session: ' + e.message });
         }
     } else {
+        // Resolve legacy JSONL path safely by looking for corresponding file in LEGACY_DIR
+        try {
+            const files = fs.readdirSync(LEGACY_DIR);
+            const matchedFile = files.find(f => f.endsWith(`${id}.jsonl`) || f.endsWith(`${id}.json`));
+            if (!matchedFile) {
+                return res.status(404).json({ error: 'Legacy session file not found' });
+            }
+            
+            resolvedPath = path.join(LEGACY_DIR, matchedFile);
+            if (!resolvedPath.startsWith(LEGACY_DIR) || !fs.existsSync(resolvedPath)) {
+                return res.status(404).json({ error: 'Legacy session file path traversal blocked' });
+            }
+        } catch (e) {
+            return res.status(500).json({ error: 'Failed to access legacy chat directory: ' + e.message });
+        }
+        
         // Parse legacy JSONL file line by line
         try {
-            const content = fs.readFileSync(file, 'utf-8');
+            const content = fs.readFileSync(resolvedPath, 'utf-8');
             const lines = content.trim().split('\n');
             const messages = [];
             let summary = 'Legacy Session';
@@ -198,7 +210,8 @@ app.get('/api/session/:id', (req, res) => {
                 if (!line.trim()) continue;
                 const data = JSON.parse(line);
                 
-                if (data.type === 'user' || data.type === 'gemini' || data.type === 'claude' || data.type === 'codex') {
+                // Generic turn extraction: handle any model name dynamically without hardcoding whitelists
+                if (data.type && data.type !== 'checkpoint' && data.type !== 'system' && data.type !== '$set') {
                     let text = '';
                     const contentVal = data.content;
                     if (Array.isArray(contentVal)) {

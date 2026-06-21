@@ -23,12 +23,16 @@ def parse_varint(data, pos):
 def is_highly_printable_string(val):
     try:
         decoded = val.decode('utf-8')
+        # Strip ANSI escape sequences (colors, styles)
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        cleaned = ansi_escape.sub('', decoded)
+        
         control_count = 0
-        for c in decoded:
+        for c in cleaned:
             o = ord(c)
             if o < 32 and o not in [9, 10, 13]:
                 control_count += 1
-        if len(decoded) > 0 and (control_count / len(decoded)) < 0.02:
+        if len(cleaned) > 0 and (control_count / len(cleaned)) < 0.02:
             return True, decoded
         return False, None
     except Exception:
@@ -62,7 +66,7 @@ def decode_protobuf(data, pos=0, end=None):
             pos += 8
             if field_num not in result:
                 result[field_num] = []
-            result[field_num].append(val.hex())
+            result[field_num].append(f"HEX:{val.hex()}")
             
         elif wire_type == 2:  # Length-delimited
             length, pos = parse_varint(data, pos)
@@ -83,7 +87,7 @@ def decode_protobuf(data, pos=0, end=None):
                     else:
                         raise Exception()
                 except Exception:
-                    decoded_val = val.hex()
+                    decoded_val = f"HEX:{val.hex()}"
             
             if field_num not in result:
                 result[field_num] = []
@@ -96,7 +100,7 @@ def decode_protobuf(data, pos=0, end=None):
             pos += 4
             if field_num not in result:
                 result[field_num] = []
-            result[field_num].append(val.hex())
+            result[field_num].append(f"HEX:{val.hex()}")
         else:
             break
             
@@ -122,7 +126,7 @@ def find_all_strings_in_dict(d):
         for item in d:
             strings.extend(find_all_strings_in_dict(item))
     elif isinstance(d, str):
-        if not re.match(r'^[0-9a-fA-F]{30,}$', d):
+        if not d.startswith("HEX:"):
             strings.append(d)
     return strings
 
@@ -289,28 +293,53 @@ def parse_sqlite_db_meta(db_path):
     except Exception as e:
         return {"error": f"Error parsing database metadata: {str(e)}"}
 
+def parse_sqlite_dir_meta(dir_path):
+    if not os.path.exists(dir_path):
+        return {"error": f"Directory not found: {dir_path}"}
+        
+    results = []
+    try:
+        for f in os.listdir(dir_path):
+            if f.endswith(".db"):
+                full_path = os.path.join(dir_path, f)
+                stat = os.stat(full_path)
+                meta = parse_sqlite_db_meta(full_path)
+                if "error" not in meta:
+                    meta["date"] = stat.st_mtime * 1000  # JS epoch millis
+                    meta["size"] = stat.st_size
+                    meta["file"] = full_path
+                    results.append(meta)
+        return results
+    except Exception as e:
+        return {"error": f"Error scanning directory: {str(e)}"}
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(json.dumps({"error": "No database path provided"}))
+        print(json.dumps({"error": "No parameters provided"}))
         sys.exit(1)
         
     meta_only = False
-    db_path = None
+    scan_dir = False
+    target_path = None
     
     for arg in sys.argv[1:]:
         if arg == "--meta":
             meta_only = True
+        elif arg == "--scan":
+            scan_dir = True
         else:
-            db_path = arg
+            target_path = arg
             
-    if not db_path:
-        print(json.dumps({"error": "No database path provided"}))
+    if not target_path:
+        print(json.dumps({"error": "No database or directory path provided"}))
         sys.exit(1)
         
-    if meta_only:
-        result = parse_sqlite_db_meta(db_path)
+    if scan_dir:
+        result = parse_sqlite_dir_meta(target_path)
+    elif meta_only:
+        result = parse_sqlite_db_meta(target_path)
     else:
-        result = parse_sqlite_db(db_path)
+        result = parse_sqlite_db(target_path)
         
     print(json.dumps(result, ensure_ascii=False))
 
