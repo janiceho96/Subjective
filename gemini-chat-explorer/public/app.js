@@ -1,5 +1,6 @@
 let allSessions = [];
 let currentFilter = 'all';
+let currentSessionMessages = [];
 
 // Load initial sessions
 async function loadSessions() {
@@ -93,10 +94,17 @@ async function selectSession(session, cardElement) {
         if (chatData.error) {
             messagesContainer.innerHTML = `<div style="color: var(--fail-color); text-align: center; padding: 40px;">Error: ${chatData.error}</div>`;
             document.getElementById('msg-count-display').textContent = '0';
+            currentSessionMessages = [];
         } else {
             document.getElementById('msg-count-display').textContent = chatData.messages ? chatData.messages.length : '0';
+            currentSessionMessages = chatData.messages || [];
             renderMessages(chatData.messages);
-            generateRevisionDeck(chatData.messages);
+            
+            if (document.getElementById('tab-revision').classList.contains('active')) {
+                generateRevisionDeck(currentSessionMessages);
+            } else {
+                document.getElementById('revision-container').innerHTML = '';
+            }
         }
     } catch (e) {
         messagesContainer.innerHTML = `<div style="color: var(--fail-color); text-align: center; padding: 40px;">Error: ${e.message}</div>`;
@@ -262,6 +270,7 @@ document.getElementById('tab-revision').addEventListener('click', () => {
     document.getElementById('tab-dialogue').classList.remove('active');
     document.getElementById('revision-container').classList.remove('hidden');
     document.getElementById('messages-container').classList.add('hidden');
+    generateRevisionDeck(currentSessionMessages);
 });
 
 function generateRevisionDeck(messages) {

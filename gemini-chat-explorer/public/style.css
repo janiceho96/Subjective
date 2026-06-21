@@ -214,6 +214,7 @@ body {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .session-card::before {
@@ -747,6 +748,7 @@ body {
     padding: 32px 48px;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-auto-rows: min-content;
     gap: 24px;
     min-height: 0;
     align-content: start;
@@ -762,6 +764,7 @@ body {
     gap: 14px;
     position: relative;
     overflow: hidden;
+    min-height: min-content;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
