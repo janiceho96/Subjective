@@ -17,6 +17,13 @@
       ]
     }
   ],
+  "mac": {
+    "target": [
+      "dmg",
+      "zip"
+    ],
+    "category": "public.app-category.education"
+  },
   "win": {
     "target": [
       {

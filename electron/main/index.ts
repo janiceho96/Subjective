@@ -523,7 +523,8 @@ except Exception as e:
     print(f"ERROR: {str(e)}", file=sys.stderr)
     sys.exit(1)
 `
-      const py = spawn('python', ['-c', pythonScript, filePath])
+      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+      const py = spawn(pythonCmd, ['-c', pythonScript, filePath])
       
       let stdout = ''
       let stderr = ''
