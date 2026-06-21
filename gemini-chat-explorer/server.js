@@ -61,7 +61,7 @@ app.get('/api/sessions', (req, res) => {
                 const stat = fs.statSync(fullPath);
                 
                 let summary = 'Legacy Session';
-                let id = f.replace('.jsonl', '').split('-').pop();
+                let id = f.replace('.jsonl', '').replace('.json', '');
                 let date = stat.mtime;
                 
                 try {
@@ -69,7 +69,6 @@ app.get('/api/sessions', (req, res) => {
                     
                     if (firstLine.trim()) {
                         const firstData = JSON.parse(firstLine);
-                        id = firstData.sessionId || id;
                         if (firstData.startTime) {
                             date = new Date(firstData.startTime);
                         }
@@ -186,7 +185,7 @@ app.get('/api/session/:id', (req, res) => {
         // Resolve legacy JSONL path safely by looking for corresponding file in LEGACY_DIR
         try {
             const files = fs.readdirSync(LEGACY_DIR);
-            const matchedFile = files.find(f => f.endsWith(`${id}.jsonl`) || f.endsWith(`${id}.json`));
+            const matchedFile = files.find(f => f === `${id}.jsonl` || f === `${id}.json` || f.endsWith(`${id}.jsonl`) || f.endsWith(`${id}.json`));
             if (!matchedFile) {
                 return res.status(404).json({ error: 'Legacy session file not found' });
             }
