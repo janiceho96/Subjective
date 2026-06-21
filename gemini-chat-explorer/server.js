@@ -272,6 +272,50 @@ app.get('/api/session/:id', (req, res) => {
     }
 });
 
+// Delete specific session
+app.delete('/api/session/:id', (req, res) => {
+    const { id } = req.params;
+    const { source } = req.query;
+    
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+        return res.status(400).json({ error: 'Invalid session ID format' });
+    }
+    
+    let resolvedPath = '';
+    
+    if (source === 'sqlite') {
+        resolvedPath = path.join(SQLITE_DIR, `${id}.db`);
+        if (!resolvedPath.startsWith(SQLITE_DIR)) {
+            return res.status(400).json({ error: 'Path traversal blocked' });
+        }
+    } else {
+        try {
+            const files = fs.readdirSync(LEGACY_DIR);
+            const matchedFile = files.find(f => f === `${id}.jsonl` || f === `${id}.json` || f.endsWith(`${id}.jsonl`) || f.endsWith(`${id}.json`));
+            if (!matchedFile) {
+                return res.status(404).json({ error: 'Session file not found' });
+            }
+            resolvedPath = path.join(LEGACY_DIR, matchedFile);
+            if (!resolvedPath.startsWith(LEGACY_DIR)) {
+                return res.status(400).json({ error: 'Path traversal blocked' });
+            }
+        } catch (e) {
+            return res.status(500).json({ error: 'Failed to access legacy chat directory: ' + e.message });
+        }
+    }
+    
+    try {
+        if (fs.existsSync(resolvedPath)) {
+            fs.unlinkSync(resolvedPath);
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ error: 'Session file not found on disk' });
+        }
+    } catch (e) {
+        return res.status(500).json({ error: 'Failed to delete session: ' + e.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });

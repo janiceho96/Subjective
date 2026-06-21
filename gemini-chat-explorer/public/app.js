@@ -1,6 +1,7 @@
 let allSessions = [];
 let currentFilter = 'all';
 let currentSessionMessages = [];
+let currentSession = null;
 
 // Load initial sessions
 async function loadSessions() {
@@ -69,6 +70,7 @@ function renderSessionsList() {
 }
 
 async function selectSession(session, cardElement) {
+    currentSession = session;
     document.querySelectorAll('.session-card').forEach(c => c.classList.remove('selected'));
     cardElement.classList.add('selected');
     
@@ -271,6 +273,42 @@ document.getElementById('tab-revision').addEventListener('click', () => {
     document.getElementById('revision-container').classList.remove('hidden');
     document.getElementById('messages-container').classList.add('hidden');
     generateRevisionDeck(currentSessionMessages);
+});
+
+// Theme toggle click handler
+document.getElementById('theme-toggle').addEventListener('click', () => {
+    const isLight = document.body.classList.toggle('light-theme');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+});
+
+// Delete session click handler
+document.getElementById('delete-session-btn').addEventListener('click', async () => {
+    if (!currentSession) return;
+    
+    const confirmDelete = confirm(`Are you sure you want to delete the conversation history for "${currentSession.title}"? This cannot be undone.`);
+    if (!confirmDelete) return;
+    
+    try {
+        const res = await fetch(`/api/session/${currentSession.id}?source=${currentSession.source}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            // Reset active states and hide chat view
+            document.getElementById('chat-view').classList.add('hidden');
+            document.getElementById('welcome-view').classList.remove('hidden');
+            currentSession = null;
+            currentSessionMessages = [];
+            
+            // Reload session list from server
+            await loadSessions();
+        } else {
+            alert(`Failed to delete session: ${data.error}`);
+        }
+    } catch (e) {
+        alert(`Error deleting session: ${e.message}`);
+    }
 });
 
 function generateRevisionDeck(messages) {
@@ -584,4 +622,11 @@ function generateRevisionDeck(messages) {
 }
 
 // Load the app on load
-window.onload = loadSessions;
+window.onload = () => {
+    // Apply saved theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+    }
+    loadSessions();
+};

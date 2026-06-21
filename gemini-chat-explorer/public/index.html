@@ -17,6 +17,7 @@
                 <div class="logo-area">
                     <span class="logo-icon">🪐</span>
                     <h2>Antigravity Explorer</h2>
+                    <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light/Dark Theme" style="margin-left: auto; background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; display: flex; align-items: center; justify-content: center;">🌓</button>
                 </div>
                 <div class="stats-banner">
                     <span class="sessions-count" id="session-count-badge">0 sessions</span>
@@ -84,7 +85,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="header-right">
+                    <div class="header-right" style="display: flex; gap: 12px; align-items: center;">
                         <div class="session-stat-badge">
                             <span class="badge-label">MESSAGES</span>
                             <span class="badge-value" id="msg-count-display">0</span>
@@ -93,6 +94,9 @@
                             <span class="badge-label">SIZE</span>
                             <span class="badge-value" id="size-display">0 MB</span>
                         </div>
+                        <button class="delete-btn" id="delete-session-btn" title="Delete Chat Session">
+                            <span>🗑️</span> Delete
+                        </button>
                     </div>
                 </div>
                 

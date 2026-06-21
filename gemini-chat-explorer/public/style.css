@@ -902,3 +902,136 @@ body {
     }
 }
 
+/* --- LIGHT MODE CUSTOMIZATIONS --- */
+.light-theme {
+    --bg-color: #f1f5f9;
+    --sidebar-bg: rgba(226, 232, 240, 0.7);
+    --card-bg: rgba(255, 255, 255, 0.6);
+    --card-hover: rgba(255, 255, 255, 0.85);
+    --card-selected: rgba(99, 102, 241, 0.08);
+    --border-color: rgba(15, 23, 42, 0.08);
+    --text-main: #0f172a;
+    --text-muted: #475569;
+    --text-dark: #64748b;
+    --ai-bubble: rgba(255, 255, 255, 0.85);
+}
+
+.light-theme .theme-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .welcome-card {
+    background: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+.light-theme .welcome-card h1 {
+    background: linear-gradient(to right, #0f172a, #4f46e5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.light-theme .stat-pill {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.light-theme .stat-num {
+    color: #0f172a;
+}
+
+.light-theme .search-area input {
+    background: rgba(255, 255, 255, 0.85);
+    color: #0f172a;
+}
+
+.light-theme .search-area input:focus {
+    background: #fff;
+    border-color: var(--accent-color);
+}
+
+.light-theme .filter-btn:not(.active) {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.light-theme .logo-area h2 {
+    background: linear-gradient(135deg, #0f172a, #334155);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.light-theme .chat-header {
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.light-theme .header-info h1 {
+    color: #0f172a;
+}
+
+.light-theme .session-stat-badge {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.light-theme .badge-value {
+    color: #0f172a;
+}
+
+.light-theme .tool-block {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.light-theme .tool-header {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.light-theme .tool-body {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.light-theme .tool-args, .light-theme .tool-output {
+    color: #0f172a;
+}
+
+.light-theme .field-content {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.04);
+    color: #0f172a;
+}
+
+.light-theme .message.agent .message-bubble {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.light-theme .revision-card {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.light-theme .chat-tab-bar {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.light-theme .chat-tab-btn:not(.active):hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+/* --- DELETE BUTTON STYLING --- */
+.delete-btn {
+    background: var(--fail-bg);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: var(--fail-color);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s ease;
+}
+
+.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: var(--fail-color);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+}
+
