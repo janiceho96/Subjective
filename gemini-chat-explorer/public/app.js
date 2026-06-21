@@ -259,26 +259,171 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     };
 });
 
-// Tab Switching Event Handlers
-document.getElementById('tab-dialogue').addEventListener('click', () => {
-    document.getElementById('tab-dialogue').classList.add('active');
-    document.getElementById('tab-revision').classList.remove('active');
-    document.getElementById('messages-container').classList.remove('hidden');
-    document.getElementById('revision-container').classList.add('hidden');
-});
+// Tab Switching & Saving Spaces
+let activeRevisionCards = {};
 
-document.getElementById('tab-revision').addEventListener('click', () => {
-    document.getElementById('tab-revision').classList.add('active');
-    document.getElementById('tab-dialogue').classList.remove('active');
-    document.getElementById('revision-container').classList.remove('hidden');
-    document.getElementById('messages-container').classList.add('hidden');
-    generateRevisionDeck(currentSessionMessages);
-});
+function getSavedCards() {
+    try {
+        const data = localStorage.getItem('saved_revision_cards');
+        return data ? JSON.parse(data) : {};
+    } catch (e) {
+        console.error("Error reading saved cards:", e);
+        return {};
+    }
+}
+
+function saveSavedCards(cards) {
+    try {
+        localStorage.setItem('saved_revision_cards', JSON.stringify(cards));
+    } catch (e) {
+        console.error("Error saving cards:", e);
+    }
+}
+
+function handleCardCheckboxChange(cardId) {
+    const saved = getSavedCards();
+    if (saved[cardId]) {
+        delete saved[cardId];
+    } else {
+        const cardData = activeRevisionCards[cardId];
+        if (cardData) {
+            saved[cardId] = cardData;
+        }
+    }
+    saveSavedCards(saved);
+    
+    // Sync all checkboxes for this cardId across tabs
+    document.querySelectorAll(`.save-card-checkbox[data-card-id="${cardId}"]`).forEach(cb => {
+        cb.checked = !!saved[cardId];
+    });
+    
+    // If we're on the saved space tab, re-render to reflect removal
+    if (document.getElementById('tab-saved').classList.contains('active')) {
+        renderSavedSpace();
+    }
+}
+window.handleCardCheckboxChange = handleCardCheckboxChange;
+
+function renderSavedSpace() {
+    const container = document.getElementById('saved-container');
+    container.innerHTML = '';
+    
+    const saved = getSavedCards();
+    const savedList = Object.values(saved);
+    
+    if (savedList.length === 0) {
+        container.innerHTML = `
+            <div style="color: var(--text-dark); text-align: center; padding: 60px 20px; grid-column: 1 / -1;">
+                <div style="font-size: 2.2rem; margin-bottom: 16px; filter: drop-shadow(0 0 8px var(--accent-color));">⭐</div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: var(--text-main); margin-bottom: 6px;">Your Revision Space is Empty</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 320px; margin: 0 auto; line-height: 1.5;">
+                    Browse the <strong>Revision Deck</strong> of any chat log and tick the checkbox on any card to save it here.
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    savedList.forEach(cardData => {
+        // Cache in activeRevisionCards so they can be unchecked/toggled
+        activeRevisionCards[cardData.id] = cardData;
+        
+        const card = document.createElement('div');
+        card.className = `revision-card ${cardData.category}`;
+        
+        card.innerHTML = `
+            <div class="card-header">
+                <span class="card-badge ${cardData.badgeClass}">${cardData.badgeText}</span>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <label class="card-save-control">
+                        <input type="checkbox" class="save-card-checkbox" checked data-card-id="${cardData.id}" onchange="handleCardCheckboxChange('${cardData.id}')">
+                        <span style="font-size: 0.72rem; font-weight: 600; color: var(--accent-color);">Saved</span>
+                    </label>
+                    <span class="card-date">${cardData.timeStr}</span>
+                </div>
+            </div>
+            <div class="session-reference-title" style="font-size: 0.65rem; color: var(--accent-color); font-weight: 700; text-transform: uppercase; margin-bottom: -4px; letter-spacing: 0.03em;">
+                From: ${escapeHtml(cardData.sessionTitle)}
+            </div>
+            <div class="card-field">
+                <span class="field-title">Active Prompt</span>
+                <div class="field-prompt">${formatMarkdown(cardData.promptText)}</div>
+            </div>
+            ${cardData.fieldsHTML}
+        `;
+        container.appendChild(card);
+    });
+}
+
+function setActiveTab(tab) {
+    document.getElementById('tab-dialogue').classList.toggle('active', tab === 'dialogue');
+    document.getElementById('tab-revision').classList.toggle('active', tab === 'revision');
+    document.getElementById('tab-saved').classList.toggle('active', tab === 'saved');
+    
+    document.getElementById('messages-container').classList.toggle('hidden', tab !== 'dialogue');
+    document.getElementById('revision-container').classList.toggle('hidden', tab !== 'revision');
+    document.getElementById('saved-container').classList.toggle('hidden', tab !== 'saved');
+    
+    if (tab === 'revision') {
+        generateRevisionDeck(currentSessionMessages);
+    } else if (tab === 'saved') {
+        renderSavedSpace();
+    }
+}
+
+// Tab Switching Event Handlers
+document.getElementById('tab-dialogue').addEventListener('click', () => setActiveTab('dialogue'));
+document.getElementById('tab-revision').addEventListener('click', () => setActiveTab('revision'));
+document.getElementById('tab-saved').addEventListener('click', () => setActiveTab('saved'));
 
 // Theme toggle click handler
 document.getElementById('theme-toggle').addEventListener('click', () => {
     const isLight = document.body.classList.toggle('light-theme');
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
+});
+
+// Rename session click handler
+document.getElementById('rename-session-btn').addEventListener('click', async () => {
+    if (!currentSession) return;
+    
+    const newTitle = prompt("Enter a new name for this conversation:", currentSession.title);
+    if (newTitle === null) return; // cancelled
+    
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+        alert("Conversation name cannot be empty.");
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/session/${currentSession.id}/rename`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title: trimmedTitle })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            // Update local memory
+            currentSession.title = data.title;
+            document.getElementById('session-title').textContent = data.title;
+            
+            // Also update the session list details if we have it loaded in memory
+            const matched = allSessions.find(s => s.id === currentSession.id);
+            if (matched) {
+                matched.title = data.title;
+            }
+            
+            // Re-render session list to update titles in sidebar
+            renderSessionsList();
+        } else {
+            alert(`Failed to rename session: ${data.error}`);
+        }
+    } catch (e) {
+        alert(`Error renaming session: ${e.message}`);
+    }
 });
 
 // Delete session click handler
@@ -320,6 +465,8 @@ function generateRevisionDeck(messages) {
         return;
     }
     
+    activeRevisionCards = {};
+    const savedCards = getSavedCards();
     let currentPrompt = "Initial Session Setup";
     let cardCount = 0;
     
@@ -332,7 +479,7 @@ function generateRevisionDeck(messages) {
         
         // Process tool calls in Agent message
         if (msg.tools && msg.tools.length > 0) {
-            msg.tools.forEach(tool => {
+            msg.tools.forEach((tool, toolIdx) => {
                 const card = document.createElement('div');
                 let category = 'cat-findings';
                 let badgeClass = 'badge-findings';
@@ -419,17 +566,37 @@ function generateRevisionDeck(messages) {
                     `;
                 }
                 
-                card.className = `revision-card ${category}`;
-                
                 const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString(undefined, {
                     hour: '2-digit',
                     minute: '2-digit'
                 }) : `Step ${msgIdx}`;
                 
+                const cardId = `${currentSession.id}_tool_${msgIdx}_${toolIdx}_${tool.name || 'action'}`;
+                const isSaved = !!savedCards[cardId];
+                
+                activeRevisionCards[cardId] = {
+                    id: cardId,
+                    sessionId: currentSession.id,
+                    sessionTitle: currentSession.title,
+                    category,
+                    badgeClass,
+                    badgeText,
+                    timeStr,
+                    promptText: currentPrompt,
+                    fieldsHTML
+                };
+                
+                card.className = `revision-card ${category}`;
                 card.innerHTML = `
                     <div class="card-header">
                         <span class="card-badge ${badgeClass}">${badgeText}</span>
-                        <span class="card-date">${timeStr}</span>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label class="card-save-control">
+                                <input type="checkbox" class="save-card-checkbox" ${isSaved ? 'checked' : ''} data-card-id="${cardId}" onchange="handleCardCheckboxChange('${cardId}')">
+                                <span>Save</span>
+                            </label>
+                            <span class="card-date">${timeStr}</span>
+                        </div>
                     </div>
                     <div class="card-field">
                         <span class="field-title">Active Prompt</span>
@@ -446,6 +613,7 @@ function generateRevisionDeck(messages) {
         if (msg.text) {
             const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
             let match;
+            let snippetIdx = 0;
             while ((match = codeBlockRegex.exec(msg.text)) !== null) {
                 const lang = match[1] || 'code';
                 const code = match[2];
@@ -459,22 +627,48 @@ function generateRevisionDeck(messages) {
                     minute: '2-digit'
                 }) : `Step ${msgIdx}`;
                 
-                card.innerHTML = `
-                    <div class="card-header">
-                        <span class="card-badge badge-code">Code Snippet (${lang})</span>
-                        <span class="card-date">${timeStr}</span>
-                    </div>
-                    <div class="card-field">
-                        <span class="field-title">Active Prompt</span>
-                        <div class="field-prompt">${formatMarkdown(currentPrompt)}</div>
-                    </div>
+                const cardId = `${currentSession.id}_code_${msgIdx}_${snippetIdx}`;
+                const isSaved = !!savedCards[cardId];
+                
+                const fieldsHTML = `
                     <div class="card-field">
                         <span class="field-title">Snippet Details</span>
                         <pre class="field-content">${escapeHtml(code)}</pre>
                     </div>
                 `;
+                
+                activeRevisionCards[cardId] = {
+                    id: cardId,
+                    sessionId: currentSession.id,
+                    sessionTitle: currentSession.title,
+                    category: 'cat-code',
+                    badgeClass: 'badge-code',
+                    badgeText: `Code Snippet (${lang})`,
+                    timeStr,
+                    promptText: currentPrompt,
+                    fieldsHTML
+                };
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-badge badge-code">Code Snippet (${lang})</span>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label class="card-save-control">
+                                <input type="checkbox" class="save-card-checkbox" ${isSaved ? 'checked' : ''} data-card-id="${cardId}" onchange="handleCardCheckboxChange('${cardId}')">
+                                <span>Save</span>
+                            </label>
+                            <span class="card-date">${timeStr}</span>
+                        </div>
+                    </div>
+                    <div class="card-field">
+                        <span class="field-title">Active Prompt</span>
+                        <div class="field-prompt">${formatMarkdown(currentPrompt)}</div>
+                    </div>
+                    ${fieldsHTML}
+                `;
                 container.appendChild(card);
                 cardCount++;
+                snippetIdx++;
             }
             
             // Extract explicitly marked sections (findings/conclusions/recs)
@@ -509,7 +703,7 @@ function generateRevisionDeck(messages) {
             }
             
             if (sections.length > 0) {
-                sections.forEach(sec => {
+                sections.forEach((sec, secIdx) => {
                     const card = document.createElement('div');
                     card.className = 'revision-card cat-findings';
                     
@@ -518,19 +712,44 @@ function generateRevisionDeck(messages) {
                         minute: '2-digit'
                     }) : `Step ${msgIdx}`;
                     
+                    const cardId = `${currentSession.id}_section_${msgIdx}_${secIdx}`;
+                    const isSaved = !!savedCards[cardId];
+                    
+                    const fieldsHTML = `
+                        <div class="card-field">
+                            <span class="field-title">Details</span>
+                            <div class="field-findings">${formatMarkdown(sec.content)}</div>
+                        </div>
+                    `;
+                    
+                    activeRevisionCards[cardId] = {
+                        id: cardId,
+                        sessionId: currentSession.id,
+                        sessionTitle: currentSession.title,
+                        category: 'cat-findings',
+                        badgeClass: 'badge-findings',
+                        badgeText: `Finding: ${sec.title}`,
+                        timeStr,
+                        promptText: currentPrompt,
+                        fieldsHTML
+                    };
+                    
                     card.innerHTML = `
                         <div class="card-header">
                             <span class="card-badge badge-findings">Finding: ${escapeHtml(sec.title)}</span>
-                            <span class="card-date">${timeStr}</span>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <label class="card-save-control">
+                                    <input type="checkbox" class="save-card-checkbox" ${isSaved ? 'checked' : ''} data-card-id="${cardId}" onchange="handleCardCheckboxChange('${cardId}')">
+                                    <span>Save</span>
+                                </label>
+                                <span class="card-date">${timeStr}</span>
+                            </div>
                         </div>
                         <div class="card-field">
                             <span class="field-title">Active Prompt</span>
                             <div class="field-prompt">${formatMarkdown(currentPrompt)}</div>
                         </div>
-                        <div class="card-field">
-                            <span class="field-title">Details</span>
-                            <div class="field-findings">${formatMarkdown(sec.content)}</div>
-                        </div>
+                        ${fieldsHTML}
                     `;
                     container.appendChild(card);
                     cardCount++;
@@ -556,7 +775,7 @@ function generateRevisionDeck(messages) {
                 }
                 
                 if (callouts.length > 0) {
-                    callouts.forEach(callout => {
+                    callouts.forEach((callout, calloutIdx) => {
                         const card = document.createElement('div');
                         card.className = 'revision-card cat-findings';
                         
@@ -565,19 +784,44 @@ function generateRevisionDeck(messages) {
                             minute: '2-digit'
                         }) : `Step ${msgIdx}`;
                         
+                        const cardId = `${currentSession.id}_callout_${msgIdx}_${calloutIdx}`;
+                        const isSaved = !!savedCards[cardId];
+                        
+                        const fieldsHTML = `
+                            <div class="card-field">
+                                <span class="field-title">Content</span>
+                                <div class="field-findings">${formatMarkdown(callout)}</div>
+                            </div>
+                        `;
+                        
+                        activeRevisionCards[cardId] = {
+                            id: cardId,
+                            sessionId: currentSession.id,
+                            sessionTitle: currentSession.title,
+                            category: 'cat-findings',
+                            badgeClass: 'badge-findings',
+                            badgeText: 'Insight / Callout',
+                            timeStr,
+                            promptText: currentPrompt,
+                            fieldsHTML
+                        };
+                        
                         card.innerHTML = `
                             <div class="card-header">
                                 <span class="card-badge badge-findings">Insight / Callout</span>
-                                <span class="card-date">${timeStr}</span>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <label class="card-save-control">
+                                        <input type="checkbox" class="save-card-checkbox" ${isSaved ? 'checked' : ''} data-card-id="${cardId}" onchange="handleCardCheckboxChange('${cardId}')">
+                                        <span>Save</span>
+                                    </label>
+                                    <span class="card-date">${timeStr}</span>
+                                </div>
                             </div>
                             <div class="card-field">
                                 <span class="field-title">Active Prompt</span>
                                 <div class="field-prompt">${formatMarkdown(currentPrompt)}</div>
                             </div>
-                            <div class="card-field">
-                                <span class="field-title">Content</span>
-                                <div class="field-findings">${formatMarkdown(callout)}</div>
-                            </div>
+                            ${fieldsHTML}
                         `;
                         container.appendChild(card);
                         cardCount++;
@@ -594,19 +838,44 @@ function generateRevisionDeck(messages) {
                             minute: '2-digit'
                         }) : `Step ${msgIdx}`;
                         
+                        const cardId = `${currentSession.id}_bullets_${msgIdx}`;
+                        const isSaved = !!savedCards[cardId];
+                        
+                        const fieldsHTML = `
+                            <div class="card-field">
+                                <span class="field-title">Key Points</span>
+                                <div class="field-findings">${formatMarkdown(bullets.join('\n'))}</div>
+                            </div>
+                        `;
+                        
+                        activeRevisionCards[cardId] = {
+                            id: cardId,
+                            sessionId: currentSession.id,
+                            sessionTitle: currentSession.title,
+                            category: 'cat-findings',
+                            badgeClass: 'badge-findings',
+                            badgeText: 'Key Observations',
+                            timeStr,
+                            promptText: currentPrompt,
+                            fieldsHTML
+                        };
+                        
                         card.innerHTML = `
                             <div class="card-header">
                                 <span class="card-badge badge-findings">Key Observations</span>
-                                <span class="card-date">${timeStr}</span>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <label class="card-save-control">
+                                        <input type="checkbox" class="save-card-checkbox" ${isSaved ? 'checked' : ''} data-card-id="${cardId}" onchange="handleCardCheckboxChange('${cardId}')">
+                                        <span>Save</span>
+                                    </label>
+                                    <span class="card-date">${timeStr}</span>
+                                </div>
                             </div>
                             <div class="card-field">
                                 <span class="field-title">Active Prompt</span>
                                 <div class="field-prompt">${formatMarkdown(currentPrompt)}</div>
                             </div>
-                            <div class="card-field">
-                                <span class="field-title">Key Points</span>
-                                <div class="field-findings">${formatMarkdown(bullets.join('\n'))}</div>
-                            </div>
+                            ${fieldsHTML}
                         `;
                         container.appendChild(card);
                         cardCount++;

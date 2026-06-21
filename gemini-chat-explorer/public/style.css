@@ -1035,3 +1035,33 @@ body {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
+.rename-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.1);
+}
+
+.card-save-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.card-save-control:hover {
+    color: var(--accent-color);
+}
+
+.card-save-control input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent-color);
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+

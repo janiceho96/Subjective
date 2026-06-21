@@ -78,7 +78,10 @@
                     <div class="header-left">
                         <span class="header-chat-icon">💬</span>
                         <div class="header-info">
-                            <h1 id="session-title">Select a session</h1>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h1 id="session-title">Select a session</h1>
+                                <button class="rename-btn" id="rename-session-btn" title="Rename this conversation" style="background: transparent; border: none; cursor: pointer; font-size: 0.95rem; padding: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.6; transition: opacity 0.2s;">✏️</button>
+                            </div>
                             <div class="header-meta">
                                 <span class="source-badge" id="session-badge">SQLite</span>
                                 <span class="file-path-display" id="session-path-display">No session loaded</span>
@@ -107,6 +110,9 @@
                     <button class="chat-tab-btn" id="tab-revision">
                         <span class="tab-icon">🃏</span> Revision Deck
                     </button>
+                    <button class="chat-tab-btn" id="tab-saved">
+                        <span class="tab-icon">⭐</span> Saved Cards
+                    </button>
                 </div>
                 
                 <div class="chat-messages" id="messages-container">
@@ -115,6 +121,10 @@
                 
                 <div class="revision-deck hidden" id="revision-container">
                     <!-- Dynamic Revision Cards -->
+                </div>
+                
+                <div class="revision-deck hidden" id="saved-container">
+                    <!-- Saved Revision Cards -->
                 </div>
             </div>
         </main>

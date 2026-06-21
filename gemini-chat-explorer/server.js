@@ -8,8 +8,21 @@ const PORT = process.env.PORT || 3000;
 
 const LEGACY_DIR = 'C:\\Users\\User\\.gemini\\tmp\\user\\chats';
 const SQLITE_DIR = 'C:\\Users\\User\\.gemini\\antigravity-cli\\conversations';
+const METADATA_FILE = 'C:\\Users\\User\\gemini-chat-explorer\\metadata.json';
+
+function getCustomTitles() {
+    try {
+        if (fs.existsSync(METADATA_FILE)) {
+            return JSON.parse(fs.readFileSync(METADATA_FILE, 'utf-8'));
+        }
+    } catch (e) {
+        console.error("Failed to read metadata file:", e);
+    }
+    return {};
+}
 
 app.use(express.static('public'));
+app.use(express.json());
 
 // Helper to read the first line and the last few lines of a file efficiently without loading all of it
 function readFirstAndLastLines(filePath) {
@@ -51,6 +64,7 @@ function readFirstAndLastLines(filePath) {
 // Get all sessions
 app.get('/api/sessions', (req, res) => {
     const sessions = [];
+    const customTitles = getCustomTitles();
     
     // 1. Scan Legacy JSONL files
     if (fs.existsSync(LEGACY_DIR)) {
@@ -114,7 +128,7 @@ app.get('/api/sessions', (req, res) => {
                 
                 sessions.push({
                     id,
-                    title: summary,
+                    title: customTitles[id] || summary,
                     date,
                     source: 'legacy-jsonl',
                     size: (stat.size / (1024 * 1024)).toFixed(2) + ' MB',
@@ -130,7 +144,7 @@ app.get('/api/sessions', (req, res) => {
     if (fs.existsSync(SQLITE_DIR)) {
         try {
             // Call Python script to extract metadata of all databases in one process spawn
-            const stdout = execFileSync('python', ['dump_sqlite.py', '--scan', SQLITE_DIR], { encoding: 'utf-8' });
+            const stdout = execFileSync('python', ['dump_sqlite.py', '--scan', SQLITE_DIR], { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 });
             const dbs = JSON.parse(stdout);
             
             if (Array.isArray(dbs)) {
@@ -138,7 +152,7 @@ app.get('/api/sessions', (req, res) => {
                     if (db.error) continue;
                     sessions.push({
                         id: db.id,
-                        title: db.summary,
+                        title: customTitles[db.id] || db.summary,
                         date: new Date(db.date),
                         source: 'sqlite',
                         size: (db.size / (1024 * 1024)).toFixed(2) + ' MB',
@@ -176,8 +190,13 @@ app.get('/api/session/:id', (req, res) => {
         
         // Call Python script using safe process execution API
         try {
-            const stdout = execFileSync('python', ['dump_sqlite.py', resolvedPath], { encoding: 'utf-8' });
-            return res.json(JSON.parse(stdout));
+            const stdout = execFileSync('python', ['dump_sqlite.py', resolvedPath], { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 });
+            const data = JSON.parse(stdout);
+            const customTitles = getCustomTitles();
+            if (customTitles[id]) {
+                data.summary = customTitles[id];
+            }
+            return res.json(data);
         } catch (e) {
             return res.status(500).json({ error: 'Failed to parse SQLite session: ' + e.message });
         }
@@ -265,10 +284,37 @@ app.get('/api/session/:id', (req, res) => {
                     }
                 }
             }
-            return res.json({ id, summary, messages });
+            const customTitles = getCustomTitles();
+            const finalSummary = customTitles[id] || summary;
+            return res.json({ id, summary: finalSummary, messages });
         } catch (e) {
             return res.status(500).json({ error: 'Failed to read JSONL file: ' + e.message });
         }
+    }
+});
+
+// Rename specific session
+app.post('/api/session/:id/rename', (req, res) => {
+    const { id } = req.params;
+    const { title } = req.body;
+    
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+        return res.status(400).json({ error: 'Invalid session ID format' });
+    }
+    if (typeof title !== 'string' || !title.trim()) {
+        return res.status(400).json({ error: 'Invalid title value' });
+    }
+    
+    try {
+        let customTitles = {};
+        if (fs.existsSync(METADATA_FILE)) {
+            customTitles = JSON.parse(fs.readFileSync(METADATA_FILE, 'utf-8'));
+        }
+        customTitles[id] = title.trim();
+        fs.writeFileSync(METADATA_FILE, JSON.stringify(customTitles, null, 2), 'utf-8');
+        return res.json({ success: true, title: title.trim() });
+    } catch (e) {
+        return res.status(500).json({ error: 'Failed to update custom title: ' + e.message });
     }
 });
 
